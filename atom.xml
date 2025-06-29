@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Hexo</title>
+  
+  
+  <link href="http://example.com/atom.xml" rel="self"/>
+  
+  <link href="http://example.com/"/>
+  <updated>2025-06-28T13:55:14.613Z</updated>
+  <id>http://example.com/</id>
+  
+  <author>
+    <name>John Doe</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>容器测试</title>
+    <link href="http://example.com/2025/06/28/onetest/"/>
+    <id>http://example.com/2025/06/28/onetest/</id>
+    <published>2025-06-28T14:00:00.000Z</published>
+    <updated>2025-06-28T13:55:14.613Z</updated>
+    
+    <content type="html"><![CDATA[<p>::: tips</p><p>这是一个提示容器。</p><p>支持**加粗**、[链接](<a href="https://hexo.io">https://hexo.io</a>)等语法。</p><p>:::</p><p>::: warning</p><p>这是一个警告容器，注意格式对齐！</p><p>:::</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;::: tips&lt;/p&gt;
+&lt;p&gt;这是一个提示容器。&lt;/p&gt;
+&lt;p&gt;支持**加粗**、[链接](&lt;a href=&quot;https://hexo.io&quot;&gt;https://hexo.io&lt;/a&gt;)等语法。&lt;/p&gt;
+&lt;p&gt;:::&lt;/p&gt;
+&lt;p&gt;::: warning&lt;/p&gt;
+&lt;p&gt;这是</summary>
+      
+    
+    
+    
+    
+  </entry>
+  
+  <entry>
+    <title>gRPC 中的服务和方法的路由映射</title>
+    <link href="http://example.com/2025/06/28/gRPC%20%E4%B8%AD%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%92%8C%E6%96%B9%E6%B3%95%E7%9A%84%E8%B7%AF%E7%94%B1%E6%98%A0%E5%B0%84/"/>
+    <id>http://example.com/2025/06/28/gRPC%20%E4%B8%AD%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%92%8C%E6%96%B9%E6%B3%95%E7%9A%84%E8%B7%AF%E7%94%B1%E6%98%A0%E5%B0%84/</id>
+    <published>2025-06-28T13:30:00.000Z</published>
+    <updated>2025-06-28T14:00:19.963Z</updated>
+    
+    <content type="html"><![CDATA[<p>:::tips<br><strong>gRPC 底层靠的是 Protobuf 中定义的“<strong><strong><font style="background-color:#E8F7CF;">服务名/方法名</font></strong></strong>”，自动生成代码后注册成映射表，匹配请求时</strong>**<font style="background-color:#FBDE28;">按路径路由到你实现的 C++ 逻辑代码</font>****。你实现的是 handler，gRPC 自动路由和参数序列化/反序列化。  **</p><p>:::</p><p>所以说，可以说 gRPC 是路由的操作？自动生成接口之后，然后我们继承这个自动生成的类，重写这个接口，然后当请求来的时候，gRPC 的任务就是把请求的信息送到我们重写的相应的接口函数中（完成通信）</p><hr><p>路由映射在这一步发生<strong>服务注册</strong>：</p><p><code>builder.RegisterService(&amp;service);</code></p><ol><li><code>RegisterService</code> 会遍历这个 <code>service</code> 对象（<code>StatusServiceImpl</code>）</li><li><strong>获取</strong>其<strong>父类</strong> <code>StatusService</code> 里<strong>注册的每一个方法名</strong>和其 <code>handler</code>（比如 <code>Login</code>, <code>GetChatServer</code>）</li><li><strong>把它们</strong>和 <strong>protobuf</strong> 中定义的 “StatusService/Login”、“StatusService/GetChatServer” <strong>做映射</strong></li></ol><p>注：这些路由字符串通常是形如 /<service>/<method> 的形式，比如：</p><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">/StatusService/Login</span><br><span class="line">/StatusService/GetChatServer</span><br></pre></td></tr></table></figure><p>这就是 gRPC 的 服务/方法映射表，放在 grpc::Server 内部的服务路由器中。</p><p><strong>一句话</strong>：</p><p>在服务绑定到 gPRC 构建器的时候，这个注册方法遍历服务对象，获取这个服务父类里面的每一个方法和我们实现的 handler接口（重写的），将它们与 protobuf 中定义的方法所对应。</p><p>这样根据客户端的路由请求，就能指定到目标的服务函数，处理请求，返回应答。</p><p><strong>客户端的请求</strong>：</p><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">:method = POST</span><br><span class="line">:path = /StatusService/Login</span><br><span class="line">content-type = application/grpc</span><br></pre></td></tr></table></figure><p><font style="background-color:#FBE4E7;">gRPC Server 收到这个请求后：</font></p><ol><li>查找 <code>/StatusService/Login</code> 是哪个服务对象下的哪个方法</li><li>找到你实现的 <code>StatusServiceImpl::Login()</code> 方法</li><li>调用这个函数，传入反序列化好的 <code>LoginReq</code> 对象</li><li>执行你的业务逻辑，返回 <code>LoginRsp</code>，由框架再序列化发回客户端</li></ol><p>✅ <strong>这一整套过程是由 gRPC 框架自动完成的，你只要实现好方法即可。</strong></p><hr><hr>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;:::tips&lt;br&gt;
+&lt;strong&gt;gRPC 底层靠的是 Protobuf 中定义的“&lt;strong&gt;&lt;strong&gt;&lt;font style=&quot;background-color:#E8F7CF;&quot;&gt;服务名/方法名&lt;/font&gt;&lt;/strong&gt;&lt;/strong&gt;”，自动</summary>
+      
+    
+    
+    
+    <category term="系统设计" scheme="http://example.com/categories/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/"/>
+    
+    
+    <category term="gRPC" scheme="http://example.com/tags/gRPC/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>the frist blog of my</title>
+    <link href="http://example.com/2025/06/28/the-frist-blog-of-my/"/>
+    <id>http://example.com/2025/06/28/the-frist-blog-of-my/</id>
+    <published>2025-06-28T11:47:48.000Z</published>
+    <updated>2025-06-28T11:47:48.556Z</updated>
+    
+    
+    
+    
+    
+  </entry>
+  
+  <entry>
+    <title>Hello World</title>
+    <link href="http://example.com/2025/06/28/hello-world/"/>
+    <id>http://example.com/2025/06/28/hello-world/</id>
+    <published>2025-06-28T11:42:17.487Z</published>
+    <updated>2025-06-28T11:42:17.487Z</updated>
+    
+    <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p><h2 id="Quick-Start">Quick Start</h2><h3 id="Create-a-new-post">Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p><h3 id="Run-server">Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p><h3 id="Generate-static-files">Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p><h3 id="Deploy-to-remote-sites">Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;Welcome to &lt;a href=&quot;https://hexo.io/&quot;&gt;Hexo&lt;/a&gt;! This is your very first post. Check &lt;a href=&quot;https://hexo.io/docs/&quot;&gt;documentation&lt;/a&gt; for</summary>
+      
+    
+    
+    
+    
+  </entry>
+  
+</feed>
